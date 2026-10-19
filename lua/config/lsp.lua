@@ -33,6 +33,38 @@ vim.api.nvim_create_autocmd("LspAttach", {
         if client:supports_method("textDocument/codeAction") then
             vim.keymap.set("n", "<leader>ca", vim.lsp.buf.code_action, { buffer = buf, desc = "LSP code action" })
         end
+        -- 言語サーバーが Type Definition をサポートしているかチェック
+        if client:supports_method("textDocument/typeDefinition") then
+            local opts = { noremap = true, silent = true, buffer = buf, desc = "LSP: Go to Type Definition" }
+
+            -- キーマップを設定（ここでは 'gt' に割り当てていますが、好みに合わせて変更してください）
+            vim.keymap.set('n', 'gt', vim.lsp.buf.type_definition, opts)
+        end
+
+        -- 1. 関数の引数ヘルプ（インサートモード中に Ctrl+k で呼び出せるようにする）
+        if client:supports_method("textDocument/signatureHelp") then
+            vim.keymap.set("i", "<C-k>", vim.lsp.buf.signature_help, { desc = "Signature help" })
+        end
+
+        -- 2. Code Lens の実行（goplsのテスト実行などに必須）
+        if client:supports_method("textDocument/codeLens") then
+            vim.keymap.set("n", "<leader>cl", vim.lsp.codelens.run, { desc = "Code Lens run" })
+        end
+
+        -- 3. カーソル下の同じ変数を自動ハイライト（キーマップではなく自動コマンド）
+        if client:supports_method("textDocument/documentHighlight") then
+            local group = vim.api.nvim_create_augroup("LspDocumentHighlight", { clear = false })
+            vim.api.nvim_create_autocmd({ "CursorHold", "CursorHoldI" }, {
+                buffer = buf,
+                group = group,
+                callback = vim.lsp.buf.document_highlight,
+            })
+            vim.api.nvim_create_autocmd({ "CursorMoved", "CursorMovedI" }, {
+                buffer = buf,
+                group = group,
+                callback = vim.lsp.buf.clear_references,
+            })
+        end
 
         -- Goファイル保存時にインポートを自動追加・削除する設定（ここをコピペ）
         if client.name == "gopls" then
