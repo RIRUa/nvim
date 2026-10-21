@@ -36,7 +36,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `lua/my_snippets/` — LuaSnip の Lua 形式スニペット（`from_lua` ローダー。現状 `go.lua` の `iferr`。treesitter（go パーサー）で囲んでいる関数の戻り値型を解析して `return` を組み立てる dynamic node を含む）
 - `snippets/` — VSCode 形式 JSON（LuaSnip の `from_vscode` ローダーで読む。friendly-snippets とプロジェクトの `.vscode/` も同じローダーで読み込む。blink.cmp は `luasnip` プリセットのため LuaSnip 経由でしかスニペットを読まない）
 
-`lua/plugins/treesitter.lua` は nvim-treesitter の `main` ブランチ API 前提（`require("nvim-treesitter").install` でパーサー導入、`FileType` autocmd で `vim.treesitter.start`）。パーサーのビルドに `tree-sitter-cli` が必要。
+`lua/plugins/treesitter.lua` は nvim-treesitter の `main` ブランチ API 前提（`require("nvim-treesitter").install` でパーサー導入、`FileType` autocmd で `vim.treesitter.start`）。パーサーのビルドに `tree-sitter-cli` が必要で、`lua/plugins/lsp.lua` の mason-tool-installer が Mason 経由で導入する（初回起動時はインストールが間に合わずパーサーのビルドエラーが出ることがあるので、その場合は nvim を再起動する）。
 
 ### プラグインスペットの構成
 

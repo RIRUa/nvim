@@ -37,6 +37,16 @@ return {
         end,
     },
     {
+        -- LSP 以外の Mason パッケージ（mason-lspconfig の ensure_installed は LSP 専用）
+        "WhoIsSethDaniel/mason-tool-installer.nvim",
+        dependencies = { "mason-org/mason.nvim" },
+        opts = {
+            ensure_installed = {
+                "tree-sitter-cli", -- nvim-treesitter (main) のパーサービルドに必要
+            },
+        },
+    },
+    {
         -- Neovim の Lua API（vim.*）の補完・型情報を lua_ls に与える
         "folke/lazydev.nvim",
         ft = "lua",
