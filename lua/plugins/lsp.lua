@@ -1,24 +1,29 @@
 -- ------------------------------------
 -- LSP
 -- ------------------------------------
----@type LazyPluginSpec
+---@type LazySpec
 return {
     {
         "neovim/nvim-lspconfig",
         dependencies = {
             -- Luaのためにmasonを導入（config = true で自動初期化）
-            { "williamboman/mason.nvim",          config = true },
-            { "williamboman/mason-lspconfig.nvim" },
+            { "mason-org/mason.nvim",           config = true },
+            { "mason-org/mason-lspconfig.nvim" },
+            "saghen/blink.cmp", -- capabilities の取得に使う
         },
         config = function()
-            -- 1. Mason で管理したい Lua の LSP だけを自動インストール対象にする
+            -- 1. Mason で管理したい LSP を自動インストール対象にする
             require("mason-lspconfig").setup({
-                ensure_installed = { "lua_ls" },
+                ensure_installed = { "lua_ls", "gopls" },
             })
 
-            -- 2. 【非推奨対策の肝】
-            -- require('lspconfig').lua_ls.setup() を完全に廃止し、
+            -- 2. require('lspconfig').xxx.setup() は使わず、
             -- Neovim 0.11標準の vim.lsp.config() で設定データを登録する
+            -- 全サーバー共通: blink.cmp が対応する補完機能を伝える
+            vim.lsp.config("*", {
+                capabilities = require("blink.cmp").get_lsp_capabilities(),
+            })
+
             vim.lsp.config("lua_ls", {
                 settings = {
                     Lua = {
@@ -30,5 +35,11 @@ return {
                 },
             })
         end,
-    }
+    },
+    {
+        -- Neovim の Lua API（vim.*）の補完・型情報を lua_ls に与える
+        "folke/lazydev.nvim",
+        ft = "lua",
+        opts = {},
+    },
 }

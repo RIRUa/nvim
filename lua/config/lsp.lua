@@ -7,6 +7,30 @@
 
 vim.lsp.enable({ "lua_ls", "gopls" })
 
+-- 0.11 標準の gr* マッピングは自前の `gr`（references）と接頭辞が衝突し、
+-- `gr` 入力後に timeoutlen 分待たされるため削除する
+for _, lhs in ipairs({ "grr", "gri", "grn", "grt", "grx" }) do
+    pcall(vim.keymap.del, "n", lhs)
+end
+pcall(vim.keymap.del, { "n", "x" }, "gra")
+
+-- Goファイル保存時にインポートを自動追加・削除する
+local function organize_imports(client, buf)
+    local params = vim.lsp.util.make_range_params(0, client.offset_encoding)
+    params.context = { only = { "source.organizeImports" }, diagnostics = {} }
+    local response = client:request_sync("textDocument/codeAction", params, 1000, buf)
+    for _, action in pairs(response and response.result or {}) do
+        if action.edit then
+            vim.lsp.util.apply_workspace_edit(action.edit, client.offset_encoding)
+        end
+        -- action 自体が Command の場合（command が文字列）と CodeAction の場合（table）の両対応
+        local command = type(action.command) == "table" and action.command or (action.command and action)
+        if command then
+            client:exec_cmd(command, { bufnr = buf })
+        end
+    end
+end
+
 vim.api.nvim_create_autocmd("LspAttach", {
     group = vim.api.nvim_create_augroup("my.lsp", {}),
     callback = function(args)
@@ -35,25 +59,24 @@ vim.api.nvim_create_autocmd("LspAttach", {
         end
         -- 言語サーバーが Type Definition をサポートしているかチェック
         if client:supports_method("textDocument/typeDefinition") then
-            local opts = { noremap = true, silent = true, buffer = buf, desc = "LSP: Go to Type Definition" }
-
-            -- キーマップを設定（ここでは 'gt' に割り当てていますが、好みに合わせて変更してください）
-            vim.keymap.set('n', 'gt', vim.lsp.buf.type_definition, opts)
+            vim.keymap.set("n", "gt", vim.lsp.buf.type_definition,
+                { buffer = buf, silent = true, desc = "LSP: Go to Type Definition" })
         end
 
         -- 1. 関数の引数ヘルプ（インサートモード中に Ctrl+k で呼び出せるようにする）
         if client:supports_method("textDocument/signatureHelp") then
-            vim.keymap.set("i", "<C-k>", vim.lsp.buf.signature_help, { desc = "Signature help" })
+            vim.keymap.set("i", "<C-k>", vim.lsp.buf.signature_help, { buffer = buf, desc = "Signature help" })
         end
 
         -- 2. Code Lens の実行（goplsのテスト実行などに必須）
         if client:supports_method("textDocument/codeLens") then
-            vim.keymap.set("n", "<leader>cl", vim.lsp.codelens.run, { desc = "Code Lens run" })
+            vim.keymap.set("n", "<leader>cl", vim.lsp.codelens.run, { buffer = buf, desc = "Code Lens run" })
         end
 
         -- 3. カーソル下の同じ変数を自動ハイライト（キーマップではなく自動コマンド）
         if client:supports_method("textDocument/documentHighlight") then
-            local group = vim.api.nvim_create_augroup("LspDocumentHighlight", { clear = false })
+            -- 再アタッチ（:LspRestart など）で重複登録されないようバッファ毎に作り直す
+            local group = vim.api.nvim_create_augroup("my.lsp.highlight." .. buf, { clear = true })
             vim.api.nvim_create_autocmd({ "CursorHold", "CursorHoldI" }, {
                 buffer = buf,
                 group = group,
@@ -66,35 +89,21 @@ vim.api.nvim_create_autocmd("LspAttach", {
             })
         end
 
-        -- Goファイル保存時にインポートを自動追加・削除する設定（ここをコピペ）
+        -- Goファイル保存時にインポートを自動追加・削除する
         if client.name == "gopls" then
             vim.api.nvim_create_autocmd("BufWritePre", {
-                group = vim.api.nvim_create_augroup("my.lsp.go", { clear = false }),
-                buffer = args.buf,
+                group = vim.api.nvim_create_augroup("my.lsp.go." .. buf, { clear = true }),
+                buffer = buf,
                 callback = function()
-                    local params = vim.lsp.util.make_range_params()
-                    params.context = { only = { "source.organizeImports" } }
-                    local result = vim.lsp.buf_request_sync(args.buf, "textDocument/codeAction", params, 1000)
-                    for _, res in pairs(result or {}) do
-                        for _, r in pairs(res.result or {}) do
-                            if r.edit then
-                                vim.lsp.util.apply_workspace_edit(r.edit, client.offset_encoding)
-                            else
-                                vim.lsp.buf.execute_command(r.command)
-                            end
-                        end
-                    end
+                    organize_imports(client, buf)
                 end,
             })
         end
 
-        -- フォーマット・補完関連
+        -- フォーマット（補完は blink.cmp に任せるので vim.lsp.completion は有効化しない）
         if client:supports_method("textDocument/formatting") then
-            vim.keymap.set("n", "<leader>f", function() require("conform").format({ lsp_fallback = true }) end,
+            vim.keymap.set("n", "<leader>cf", function() require("conform").format({ lsp_format = "fallback" }) end,
                 { buffer = buf, desc = "Format buffer (LSP/Conform)" })
-        end
-        if client:supports_method("textDocument/completion") then
-            vim.lsp.completion.enable(true, client.id, args.buf, { autotrigger = true })
         end
     end,
 })

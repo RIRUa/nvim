@@ -1,5 +1,5 @@
 -- ========================================
--- options.nvim
+-- config.options
 -- 基本設定
 -- ========================================
 require("config.options")
@@ -11,6 +11,6 @@ require("config.options")
 require("config.lazy")
 
 -- ========================================
--- lsp.nvim
+-- config.lsp
 -- ========================================
 require("config.lsp")

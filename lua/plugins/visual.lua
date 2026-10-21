@@ -63,7 +63,7 @@ return {
 
                 -- Keymaps
                 keymaps = {
-                    toggle = "<leader>bc", -- Set to false to disable
+                    toggle = "<leader>uc", -- Set to false to disable（<leader>b は neo-tree と接頭辞が衝突するため）
                 },
             })
         end,

@@ -19,6 +19,9 @@ vim.opt.smartcase = true
 vim.opt.splitright = true
 vim.opt.splitbelow = true
 
+-- CursorHold（LSP の同一シンボルハイライトなど）を早く発火させる
+vim.opt.updatetime = 250
+
 vim.opt.clipboard = "unnamedplus"
 
 -- Escで検索ハイライトを消す
@@ -30,7 +33,7 @@ vim.keymap.set("n", "<Esc>", "<cmd>nohlsearch<CR>")
 -- ========================================
 
 vim.g.mapleader = " "
-vim.g.maplocalleader = " "
+vim.g.maplocalleader = "\\" -- config/lazy.lua と揃える
 
 -- Ctrl + h/j/k/l でウィンドウ移動
 vim.keymap.set("n", "<C-h>", "<C-w>h")

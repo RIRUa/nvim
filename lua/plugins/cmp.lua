@@ -6,9 +6,19 @@ return {
         'L3MON4D3/LuaSnip',
         version = "v2.*",                -- 2026年現在の安定メジャーバージョン
         build = "make install_jsregexp", -- スニペット内の正規表現を動かすため（任意）
+        dependencies = { "rafamadriz/friendly-snippets" }, -- 定番スニペット集（from_vscode で読み込む）
         config = function()
-            -- これを追加することで、上の go.lua が自動で読み込まれます
+            -- これを追加することで、lua/my_snippets/go.lua が自動で読み込まれます
             require("luasnip.loaders.from_lua").load({ paths = { vim.fn.stdpath("config") .. "/lua/my_snippets" } })
+
+            -- VSCode 形式のスニペット（blink.cmp は luasnip プリセットだと LuaSnip 経由でしか読まない）
+            local from_vscode = require("luasnip.loaders.from_vscode")
+            from_vscode.lazy_load() -- friendly-snippets
+            from_vscode.lazy_load({ paths = { vim.fn.stdpath("config") .. "/snippets" } })
+            local project_vscode_path = vim.fn.getcwd() .. "/.vscode"
+            if vim.fn.isdirectory(project_vscode_path) == 1 then
+                from_vscode.lazy_load({ paths = { project_vscode_path } })
+            end
         end
     },
     {
@@ -53,29 +63,10 @@ return {
                 documentation = {
                     auto_show = true,
                 },
-
-                autocomplete = {
-                    enable = false,
-                }
             },
 
             sources = {
                 default = { "lsp", "path", 'snippets', "buffer" },
-                providers = {
-                    snippets = {
-                        opts = {
-                            search_paths = function()
-                                local paths = { vim.fn.stdpath("config") .. "/snippets" }
-                                local cwd = vim.fn.getcwd()
-                                local project_vscode_path = cwd .. "/.vscode"
-                                if vim.fn.isdirectory(project_vscode_path) == 1 then
-                                    table.insert(paths, project_vscode_path)
-                                end
-                                return paths
-                            end
-                        }
-                    }
-                }
             },
 
             fuzzy = {

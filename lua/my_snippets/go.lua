@@ -2,89 +2,102 @@ local ls = require("luasnip")
 local s = ls.snippet
 local sn = ls.snippet_node
 local t = ls.text_node
-local i = ls.insert_node
 local d = ls.dynamic_node
 
--- 関数の戻り値を解析して、適切な return 文の初期値を返す関数
-local function go_return_values()
-    -- 現在のカーソル位置から上に向かって関数のシグネチャを探す
-    local line = vim.fn.search([[func\s\+\k\+\s*(.*)\s*(.*)\s*{]], "bnW")
-    if line == 0 then
-        -- 戻り値の括弧がない単純な定義（func foo() error { など）
-        line = vim.fn.search([[func\s\+\k\+\s*(.*)[^{]*{]], "bnW")
+local numeric_types = {
+    int = true, int8 = true, int16 = true, int32 = true, int64 = true,
+    uint = true, uint8 = true, uint16 = true, uint32 = true, uint64 = true, uintptr = true,
+    float32 = true, float64 = true, complex64 = true, complex128 = true,
+    byte = true, rune = true,
+}
+
+-- 型名からゼロ値のリテラルを返す
+local function zero_value(type_text)
+    if type_text == "string" then
+        return [[""]]
+    elseif type_text == "bool" then
+        return "false"
+    elseif numeric_types[type_text] then
+        return "0"
+    elseif type_text:match("^%[%d") or type_text:match("^struct") then
+        return type_text .. "{}" -- 配列・無名構造体
+    elseif type_text:match("^[%*%[]") or type_text:match("^map%[") or type_text:match("^<%-")
+        or type_text:match("^chan") or type_text:match("^func") or type_text:match("^interface")
+        or type_text == "any" or type_text == "error" then
+        return "nil" -- ポインタ・スライス・map・chan・func・interface
+    end
+    return type_text .. "{}" -- 名前付き構造体など
+end
+
+-- カーソルを囲む関数（関数宣言・メソッド・無名関数）のノードを探す
+local function enclosing_func()
+    local ok, parser = pcall(vim.treesitter.get_parser, 0, "go")
+    if not ok or not parser then
+        return nil
+    end
+    parser:parse()
+    local row, col = unpack(vim.api.nvim_win_get_cursor(0))
+    local node = vim.treesitter.get_node({ bufnr = 0, pos = { row - 1, col } })
+    while node do
+        local ty = node:type()
+        if ty == "function_declaration" or ty == "method_declaration" or ty == "func_literal" then
+            return node
+        end
+        node = node:parent()
+    end
+    return nil
+end
+
+-- 戻り値の型を（名前付き戻り値も含めて）1 つずつ展開して返す
+local function result_types(func_node)
+    local result = func_node:field("result")[1]
+    if not result then
+        return {}
+    end
+    if result:type() ~= "parameter_list" then
+        return { vim.treesitter.get_node_text(result, 0) }
     end
 
-    if line == 0 then
-        -- 関数が見つからない場合のフォールバック
+    local types = {}
+    for child in result:iter_children() do
+        if child:type() == "parameter_declaration" then
+            local type_text = vim.treesitter.get_node_text(child:field("type")[1], 0)
+            -- `a, b int` のように名前が複数ある場合はその数だけ展開する
+            for _ = 1, math.max(#child:field("name"), 1) do
+                table.insert(types, type_text)
+            end
+        end
+    end
+    return types
+end
+
+-- 関数の戻り値を解析して、適切な return 文を組み立てる
+local function go_return_values()
+    local func_node = enclosing_func()
+    if not func_node then
+        -- パーサーがない・関数外の場合のフォールバック
         return sn(nil, { t("return err") })
     end
 
-    local func_line = vim.fn.getline(line)
-
-    -- 戻り値部分を抽出
-    local returns = ""
-
-    -- 1. 括弧があるパターン: func foo() (string, error) {
-    local paren_returns = func_line:match("%)%s*%(([^%)]+)%)%s*{")
-    if paren_returns then
-        returns = paren_returns
-    else
-        -- 2. 括弧がないパターン: func foo() error {
-        local no_paren_returns = func_line:match("%)%s*([^{]+)%s*{")
-        if no_paren_returns then
-            returns = no_paren_returns
-        end
-    end
-
-    -- 前後の余計な空白を削除
-    returns = vim.trim(returns)
-
-    -- 戻り値がない、または空の関数の場合
-    if returns == "" then
+    local types = result_types(func_node)
+    if #types == 0 then
         return sn(nil, { t("return") })
     end
 
-    -- カンマで分割して戻り値の数をカウント
     local vals = {}
-    for val in string.gmatch(returns, "[^,]+") do
-        val = vim.trim(val)
-        if val ~= "" then
-            table.insert(vals, val)
-        end
-    end
-
-    local nodes = {}
-    table.insert(nodes, t("return "))
-
-    -- 戻り値の数と型に応じてデフォルト値を生成
-    for idx, val in ipairs(vals) do
-        -- 最後の戻り値は通常 error 型なので "err" を配置
-        if idx == #vals then
-            table.insert(nodes, t("err"))
+    for idx, type_text in ipairs(types) do
+        -- 最後の戻り値が error 型なら err を返す
+        if idx == #types and type_text == "error" then
+            table.insert(vals, "err")
         else
-            -- 各型のデフォルト値を判定（型名部分を抽出）
-            local type_name = val:match("%S+\\$") or val -- 名前付き戻り値 "id string" 対策
-
-            if type_name:match("^%*") or type_name == "any" or type_name == "interface{}" then
-                table.insert(nodes, t("nil"))
-            elseif type_name == "string" then
-                table.insert(nodes, t([[""]]))
-            elseif type_name == "bool" then
-                table.insert(nodes, t("false"))
-            elseif type_name:match("int") or type_name:match("float") or type_name == "byte" or type_name == "rune" then
-                table.insert(nodes, t("0"))
-            else
-                -- 判別できない型（構造体など）は一旦 nil
-                table.insert(nodes, t("nil"))
-            end
-            table.insert(nodes, t(", "))
+            table.insert(vals, zero_value(type_text))
         end
     end
 
-    return sn(nil, nodes)
+    return sn(nil, { t("return " .. table.concat(vals, ", ")) })
 end
 
--- スニペットの定義。 `ie` と打ち込んで展開します
+-- スニペットの定義。 `iferr` と打ち込んで展開します
 return {
     s("iferr", {
         t({ "if err != nil {", "\t" }),
