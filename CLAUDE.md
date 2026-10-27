@@ -23,7 +23,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### LSP まわり（複数ファイルにまたがる）
 
-- `lua/plugins/lsp.lua`: mason / mason-lspconfig で `lua_ls` / `gopls` をインストールし、`vim.lsp.config("*", ...)`（blink.cmp の capabilities）と `vim.lsp.config("lua_ls", ...)` でサーバー設定を登録する（`require("lspconfig").xxx.setup()` は使わない方針）。`lazydev.nvim` で Lua の `vim.*` 補完を与える。
+- `lua/plugins/lsp.lua`: mason / mason-lspconfig で `lua_ls` をインストールし（`gopls` は mise で管理するため Mason の `ensure_installed` には含めない）、`vim.lsp.config("*", ...)`（blink.cmp の capabilities）と `vim.lsp.config("lua_ls", ...)` でサーバー設定を登録する（`require("lspconfig").xxx.setup()` は使わない方針）。`lazydev.nvim` で Lua の `vim.*` 補完を与える。
 - `lua/config/lsp.lua`: `vim.lsp.enable({ "lua_ls", "gopls" })` で有効化し、`LspAttach` autocmd 内で「サーバーが対応している機能のみ」バッファローカルのキーマップを張る（`gd`, `gr`, `gi`, `gt`, `<leader>k`, `<leader>rn`, `<leader>ca`, `<leader>cl`, `<leader>cf`（format）, インサートの `<C-k>`）。`gopls` では保存時（`BufWritePre`）に `source.organizeImports` を適用する。補完は blink.cmp に任せており、`vim.lsp.completion` は有効化しない。0.11 標準の `grr`/`gri`/`grn`/`gra`/`grt`/`grx` は `gr` と接頭辞が衝突するため削除している。
 - キーマップの接頭辞衝突に注意（`<leader>f*`=telescope、`<leader>rn`=rename、`<leader>c*`=LSP、`<leader>u*`=UI トグル、neo-tree は `<leader>t`/`<leader>e`/`<leader>b`）。単独で使うキーを他のキーの接頭辞にしない。
 - 新しい言語サーバーを追加する場合は、(1) `lua/config/lsp.lua` の `vim.lsp.enable` に追加、(2) 必要なら `lua/plugins/lsp.lua` の `ensure_installed` と `vim.lsp.config` に追加、の両方が必要。

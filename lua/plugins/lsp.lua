@@ -14,7 +14,8 @@ return {
         config = function()
             -- 1. Mason で管理したい LSP を自動インストール対象にする
             require("mason-lspconfig").setup({
-                ensure_installed = { "lua_ls", "gopls" },
+                -- gopls は mise で管理するため含めない
+                ensure_installed = { "lua_ls" },
             })
 
             -- 2. require('lspconfig').xxx.setup() は使わず、
