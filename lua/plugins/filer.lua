@@ -38,6 +38,7 @@ return {
         opts = {
             filesystem = {
                 follow_current_file = { enabled = true }, -- カレントのファイルを自動選択
+                use_libuv_file_watcher = true,            -- 外部でのファイル変更をツリーに即反映
                 filtered_items = {
                     visible = true,
                     hide_dotfiles = false,

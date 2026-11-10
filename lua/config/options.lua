@@ -24,6 +24,28 @@ vim.opt.updatetime = 250
 
 vim.opt.clipboard = "unnamedplus"
 
+-- ========================================
+-- 外部（AI など）によるファイル変更の自動反映
+-- ========================================
+-- autoread は checktime が呼ばれたときだけ効くため、契機となるイベントで呼ぶ
+vim.opt.autoread = true
+local autoreload = vim.api.nvim_create_augroup("my.autoreload", {})
+vim.api.nvim_create_autocmd({ "FocusGained", "BufEnter", "CursorHold", "TermLeave" }, {
+    group = autoreload,
+    callback = function()
+        -- コマンドラインモード中は checktime できない
+        if vim.fn.mode() ~= "c" then
+            vim.cmd("silent! checktime")
+        end
+    end,
+})
+vim.api.nvim_create_autocmd("FileChangedShellPost", {
+    group = autoreload,
+    callback = function(args)
+        vim.notify("外部の変更を読み込みました: " .. vim.fn.fnamemodify(args.file, ":t"), vim.log.levels.INFO)
+    end,
+})
+
 -- Escで検索ハイライトを消す
 vim.keymap.set("n", "<Esc>", "<cmd>nohlsearch<CR>")
 
