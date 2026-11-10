@@ -3,7 +3,7 @@
 -- ------------------------------------
 -- main ブランチ API 前提。パーサーのインストールには tree-sitter-cli が必要
 -- （plugins/lsp.lua の mason-tool-installer で導入）。
-local parsers = { "go", "gomod", "gosum", "lua", "vim", "vimdoc", "query" }
+local parsers = { "go", "gomod", "gosum", "lua", "vim", "vimdoc", "query", "markdown", "markdown_inline" }
 
 return {
     {
@@ -21,7 +21,7 @@ return {
             -- main ブランチではハイライトを自前で開始する必要がある
             vim.api.nvim_create_autocmd("FileType", {
                 group = vim.api.nvim_create_augroup("my.treesitter", {}),
-                pattern = { "go", "gomod", "gosum", "lua", "vim", "help", "query" },
+                pattern = { "go", "gomod", "gosum", "lua", "vim", "help", "query", "markdown" },
                 callback = function(args)
                     pcall(vim.treesitter.start, args.buf)
                 end,
