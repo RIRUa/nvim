@@ -14,6 +14,37 @@ for _, lhs in ipairs({ "grr", "gri", "grn", "grt", "grx" }) do
 end
 pcall(vim.keymap.del, { "n", "x" }, "gra")
 
+-- ========================================
+-- 診断（エラー・警告）の表示
+-- ========================================
+-- 0.11 では virtual_text が既定で無効になり、行頭のサインと下線しか出ないため明示的に設定する
+vim.diagnostic.config({
+    -- 行末にメッセージを表示（複数サーバーが付いているときだけ発生元も表示）
+    virtual_text = { spacing = 2, prefix = "●", source = "if_many" },
+    signs = {
+        text = {
+            [vim.diagnostic.severity.ERROR] = "E",
+            [vim.diagnostic.severity.WARN] = "W",
+            [vim.diagnostic.severity.INFO] = "I",
+            [vim.diagnostic.severity.HINT] = "H",
+        },
+    },
+    underline = true,
+    severity_sort = true,     -- 同じ行に複数あるときは重大なものを優先
+    update_in_insert = false, -- 入力中はちらつくので更新しない
+    float = { border = "single", source = true },
+    -- ]d / [d（0.11 標準）で移動したときに全文をフロートで表示
+    jump = { float = true },
+})
+
+-- 行末に収まらない長いメッセージの全文を見る（LSP 以外の診断にも使うのでグローバルに張る）
+vim.keymap.set("n", "<leader>cd", vim.diagnostic.open_float, { desc = "Line diagnostics (float)" })
+vim.keymap.set("n", "<leader>cq", vim.diagnostic.setloclist, { desc = "Buffer diagnostics (loclist)" })
+vim.keymap.set("n", "<leader>ud", function()
+    local enabled = not vim.diagnostic.config().virtual_text
+    vim.diagnostic.config({ virtual_text = enabled and { spacing = 2, prefix = "●", source = "if_many" } or false })
+end, { desc = "行末の診断メッセージの切り替え" })
+
 -- Goファイル保存時にインポートを自動追加・削除する
 local function organize_imports(client, buf)
     local params = vim.lsp.util.make_range_params(0, client.offset_encoding)

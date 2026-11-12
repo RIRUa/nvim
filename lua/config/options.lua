@@ -12,6 +12,8 @@ vim.opt.smartindent = true
 
 vim.opt.termguicolors = true
 vim.opt.cursorline = true
+-- 診断や gitsigns のサインが出入りするたびに本文が横にずれないよう常時表示する
+vim.opt.signcolumn = "yes"
 
 vim.opt.ignorecase = true
 vim.opt.smartcase = true
