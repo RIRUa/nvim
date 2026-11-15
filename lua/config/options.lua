@@ -13,6 +13,9 @@ vim.opt.smartindent = true
 vim.opt.termguicolors = true
 vim.opt.cursorline = true
 
+vim.opt.winblend = 0 -- ウィンドウの不透明度
+vim.opt.pumblend = 0 -- ポップアップメニューの不透明度
+
 vim.opt.ignorecase = true
 vim.opt.smartcase = true
 
