@@ -38,6 +38,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 `lua/plugins/treesitter.lua` は nvim-treesitter の `main` ブランチ API 前提（`require("nvim-treesitter").install` でパーサー導入、`FileType` autocmd で `vim.treesitter.start`）。パーサーのビルドに `tree-sitter-cli` が必要で、`lua/plugins/lsp.lua` の mason-tool-installer が Mason 経由で導入する（初回起動時はインストールが間に合わずパーサーのビルドエラーが出ることがあるので、その場合は nvim を再起動する）。
 
+### VSCode 設定の取り込み（neo-tree）
+
+`lua/config/vscode.lua` が VSCode のユーザー設定（macOS は `~/Library/Application Support/Code/User/settings.json`）とカレントの `.vscode/settings.json`（後者が優先、JSONC 対応）を読み、`lua/plugins/filer.lua` の neo-tree に渡す。`explorer.fileNesting.patterns` は `nesting_rules`（`${capture}` のみ対応、`${basename}` 等は無視）、`files.exclude` の `true` のものは `never_show_by_pattern`（`visible = true` でも隠れる。`when` 付きは非対応）に変換する。読み込みは起動時のカレントディレクトリ基準で、起動後の設定変更は再起動するまで反映されない。
+
 ### プラグインスペットの構成
 
 `lua/plugins/` は役割別にファイルが分かれている（`filer`=neo-tree, `finder`=telescope, `git`=gitsigns, `tab`=barbar, `status_line`=lualine, `visual`=tokyonight/bongo-cat, `treesitter`, `editor`=hlchunk など）。キーマップは各プラグインのスペック内（`keys` または `config`）で定義されており、集中管理ファイルはない。
