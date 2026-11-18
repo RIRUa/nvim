@@ -14,6 +14,11 @@ for _, lhs in ipairs({ "grr", "gri", "grn", "grt", "grx" }) do
 end
 pcall(vim.keymap.del, { "n", "x" }, "gra")
 
+-- カーソル行のエラー・警告の詳細をフロートで表示する（もう一度押すとフロートに入れる）
+vim.keymap.set("n", "<leader>e", function()
+    vim.diagnostic.open_float(nil, { border = "single", source = true })
+end, { desc = "Show diagnostics (line)" })
+
 -- Goファイル保存時にインポートを自動追加・削除する
 local function organize_imports(client, buf)
     local params = vim.lsp.util.make_range_params(0, client.offset_encoding)
