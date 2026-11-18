@@ -25,7 +25,6 @@ return {
                 local c = require("tokyonight.colors").setup()
                 bg_types = {
                     Active = c.bg_dark1 or c.bg_dark, -- 通常のエディタ窓
-                    Sidebar = c.bg_dark, -- neo-tree
                     Terminal = c.bg_dark,
                     Help = c.bg_dark,
                     Quickfix = c.bg_highlight,
@@ -41,14 +40,14 @@ return {
                 end
             end
 
-            -- filetype / buftype から背景の種類を決める（該当なしは通常窓の Active）
+            -- filetype / buftype から背景の種類を決める（該当なしは通常窓の Active、nil は透過のまま）
             local function window_bg_kind(buf)
                 local ft = vim.bo[buf].filetype
                 local bt = vim.bo[buf].buftype
                 if bt == "terminal" then
                     return "Terminal"
                 elseif ft == "neo-tree" then
-                    return "Sidebar"
+                    return nil -- サイドバーは常に透過
                 elseif ft == "help" or ft == "man" then
                     return "Help"
                 elseif ft == "qf" then
@@ -86,8 +85,8 @@ return {
                             vim.w[win].winhl_orig = winhl
                         end
                         local entries = strip_winhl(vim.w[win].winhl_orig or "", managed)
-                        if win == current then
-                            local kind = window_bg_kind(vim.api.nvim_win_get_buf(win))
+                        local kind = win == current and window_bg_kind(vim.api.nvim_win_get_buf(win))
+                        if kind then
                             table.insert(entries, "Normal:WinBg" .. kind)
                             for _, name in ipairs(bg_names) do
                                 table.insert(entries, ("%s:WinBg%s_%s"):format(name, kind, name))
